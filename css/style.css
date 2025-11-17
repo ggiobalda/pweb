@@ -1,0 +1,678 @@
+/* =========================
+   style.css completo per il progetto
+   ========================= */
+
+/* base */
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #004080;
+    color: whitesmoke;
+    font-size: large;
+    box-shadow: 0 2px 6px rgba(11, 74, 111, 0.12);
+    height: 6rem;
+    padding: 0px 18px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header a {
+    color: whitesmoke;
+    text-decoration: none;
+}
+
+.brand {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 2px 10px 2px 5px;
+}
+
+.logo {
+    font-size: 3rem;
+}
+
+.header-actions {
+    padding: 2px;
+}
+
+main {
+    padding: 18px;
+    width: 100%;
+}
+
+form {
+    background-color: #f0f4f8;
+    max-width: 420px;
+    margin: 40px auto;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+form span {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+    display: block;
+    margin: 8px 0 4px;
+}
+
+input,
+select {
+    background-color: whitesmoke;
+    width: 50%;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #357abd;
+    color: whitesmoke;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #4a90e2;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.error {
+    color: #b00020;
+    margin-top: 8px;
+}
+
+/* =========================
+   STILI AGGIUNTIVI PER student.js
+   ========================= */
+
+/* Layout: sidebar + main */
+.layout {
+    position: fixed;
+    top: 6rem;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 18px;
+    padding: 18px;
+    width: 100%;
+}
+
+.sidebar {
+    width: 260px;
+    background: #ffffff;
+    border-right: 1px solid #e6eef6;
+    padding: 14px;
+    border-radius: 8px;
+    height: calc(100vh - 6rem - 36px);
+    /* header height + padding */
+    overflow-y: auto;
+    box-shadow: 0 6px 18px rgba(16, 42, 67, 0.03);
+}
+
+.main {
+    flex: 1;
+    padding: 6px 12px;
+    min-width: 0;
+}
+
+/* Sidebar nav */
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar nav a {
+    display: block;
+    padding: 10px 12px;
+    color: #0b4a6f;
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.sidebar nav a:hover {
+    background: #e6f2fb;
+}
+
+.sidebar nav a.active {
+    background: #dff3ff;
+    color: #07445f;
+}
+
+/* Header small pieces */
+.brand .logo {
+    font-size: 1.6rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Page title */
+#pageTitle {
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    color: #073b4c;
+}
+
+/* Tabs / content pages */
+.tabpage {
+    display: block;
+}
+
+.tabpage.hidden {
+    display: none;
+}
+
+/* Panel (card) */
+.panel {
+    background: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(16, 42, 67, 0.04);
+}
+
+/* Grid per gli slot */
+.slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* Singolo slot (card) */
+.slot {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid #e6eef6;
+    padding: 12px;
+    border-radius: 10px;
+    max-width: 15rem;
+    background: linear-gradient(180deg, #fff, #fbfdff);
+    transition: transform .15s ease, box-shadow .15s ease;
+    cursor: pointer;
+}
+
+.slot:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 26px rgba(16, 42, 67, 0.07);
+}
+
+.slot .head {
+    font-size: 0.98rem;
+    color: #073b4c;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.slot .meta {
+    font-size: 0.88rem;
+    color: #6b7c93;
+}
+
+/* Badge (numeri e stato) */
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.badge.info {
+    background: #1f8db6;
+}
+
+.badge.warn {
+    background: #ff6b6b;
+}
+
+.badge.ok {
+    background: #28a745;
+}
+
+/* Small buttons */
+.btn-small {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    background: #1f8db6;
+    color: #fff;
+}
+
+.btn-small:hover {
+    background: #2aa0d8;
+}
+
+/* Book button (usato nelle card) */
+.btn-book {
+    border: none;
+    background: #357abd;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.btn-book:hover {
+    background: #4a90e2;
+    transform: translateY(-2px);
+}
+
+/* Empty / error */
+.empty {
+    padding: 18px;
+    color: #6b7c93;
+    text-align: center;
+}
+
+/* Modal (overlay + panel) */
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 20, 30, 0.45);
+    z-index: 9999;
+    padding: 20px;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-panel {
+    width: 420px;
+    max-width: calc(100% - 40px);
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 20px 60px rgba(16, 42, 67, 0.32);
+    max-height: calc(100vh - 80px);
+    overflow: auto;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* Modal buttons */
+.modal .btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.modal .btn.primary {
+    background: #1f8db6;
+    color: #fff;
+}
+
+.modal .btn.ghost {
+    background: transparent;
+    color: #073b4c;
+    border: 1px solid #e6eef6;
+}
+
+/* Table simple */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eef6fb;
+    text-align: left;
+}
+
+/* Mini calendar basics */
+.calendar .cal {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.calendar .cal th,
+.calendar .cal td {
+    padding: 6px;
+    text-align: center;
+    border: 1px solid #f0f4f8;
+}
+
+.calendar .cal td.has-event {
+    background: #e6f7ff;
+    position: relative;
+}
+
+.calendar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #1f8db6;
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* FAB (floating action button) */
+.fab {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #ff6b6b;
+    color: #fff;
+    font-size: 28px;
+    border: none;
+    box-shadow: 0 12px 30px rgba(255, 107, 107, 0.22);
+    cursor: pointer;
+}
+
+/* Responsive: sidebar collapses on small screens */
+@media (max-width: 900px) {
+    .layout {
+        flex-direction: column;
+        padding: 12px;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        order: 2;
+        display: flex;
+        gap: 8px;
+        overflow: auto;
+    }
+
+    .main {
+        order: 1;
+    }
+
+    .slots-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+/* =========================
+   Migliorie modal, radio scelta modalità, side-cards
+   (integrazione finale)
+   ========================= */
+
+/* --- Modal: pannello bianco leggibile, overlay meno invasivo --- */
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 20, 30, 0.45);
+    /* overlay scuro */
+    z-index: 9999;
+    padding: 20px;
+    /* spazio attorno al pannello su schermi piccoli */
+}
+
+.modal.hidden {
+    display: none;
+}
+
+/* pannello bianco che contiene il contenuto del modal */
+.modal-panel {
+    width: 520px;
+    max-width: 100%;
+    background: #ffffff;
+    /* SOLO il pannello è bianco */
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 28px 80px rgba(16, 42, 67, 0.35);
+    color: #073b4c;
+    max-height: calc(100vh - 80px);
+    /* previene overflow schermo */
+    overflow: auto;
+    /* scroll interno se necessario */
+    position: relative;
+}
+
+/* titolo e testo del modal */
+.modal-panel h3 {
+    margin-top: 0;
+    font-size: 1.15rem;
+    color: #072b3a;
+}
+
+.modal-panel p {
+    color: #415a6b;
+    line-height: 1.45;
+}
+
+/* icon di chiusura (angolo destro) */
+.modal-panel .close-x {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #6b7c93;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.modal-panel .close-x:hover {
+    background: #f0f6fb;
+    color: #073b4c;
+}
+
+/* azioni del modal (bottoni) */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.modal .btn.primary {
+    background: #1f8db6;
+}
+
+.modal .btn.ghost {
+    border: 1px solid #e6eef6;
+    background: transparent;
+}
+
+/* --- Scelta modalità (radio) --- */
+.mode-chooser {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* nascondi radio nativi ma mantiene accessibilità */
+.mode-chooser input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* etichette come pill */
+.mode-chooser label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #f6fbff;
+    border: 1px solid #e6f3fb;
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s ease, transform .06s ease, box-shadow .12s ease;
+    color: #064051;
+    font-weight: 600;
+}
+
+/* custom dot grafico */
+.mode-chooser .dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #9fcfe8;
+    background: #fff;
+    box-sizing: border-box;
+    display: inline-block;
+}
+
+/* stato selected: etichetta evidenziata e dot pieno */
+.mode-chooser input[type="radio"]:checked+label {
+    background: linear-gradient(180deg, #e6f9ff, #d5f2fb);
+    border-color: #7fd4ed;
+    box-shadow: 0 6px 18px rgba(31, 141, 182, 0.08);
+    transform: translateY(-2px);
+}
+
+.mode-chooser input[type="radio"]:checked+label .dot {
+    background: #1f8db6;
+    border-color: #1f8db6;
+}
+
+/* supporto focus per accessibilità */
+.mode-chooser input[type="radio"]:focus+label {
+    outline: 3px solid rgba(31, 141, 182, 0.18);
+    outline-offset: 3px;
+}
+
+/* testo secondario sotto ogni radio se necessario */
+.mode-chooser .sub {
+    display: block;
+    font-size: 0.82rem;
+    color: #587289;
+    font-weight: 500;
+}
+
+/* layout vertical su schermi piccoli */
+@media (max-width:520px) {
+    .modal-panel {
+        padding: 14px;
+        width: 100%;
+    }
+
+    .mode-chooser {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mode-chooser label {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
+
+/* --- Side-cards (coerenti con menu aside) --- */
+.side-cards {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* singola card piccola */
+.card.small {
+    background: linear-gradient(180deg, #fff, #fbfdff);
+    border: 1px solid #e6eef6;
+    padding: 10px 12px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 8px 20px rgba(16, 42, 67, 0.03);
+}
+
+/* etichetta e valore */
+.card.small .label {
+    font-size: 0.82rem;
+    color: #6b7c93;
+    font-weight: 700;
+}
+
+.card.small .stat {
+    font-size: 1.1rem;
+    color: #073b4c;
+    font-weight: 800;
+}
+
+/* allineamento orizzontale per viewport stretti */
+@media (max-width:900px) {
+    .side-cards {
+        flex-direction: row;
+        gap: 8px;
+        overflow: auto;
+    }
+
+    .card.small {
+        min-width: 120px;
+        flex: 0 0 auto;
+    }
+}
