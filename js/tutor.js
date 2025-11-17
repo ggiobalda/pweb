@@ -47,8 +47,10 @@ $('#createSlotBtn').addEventListener('click', (e) => {
     console.log('createSlotBtn clicked');
 
     // formattazione iniziale del form
-    modalSlotDate.innerHTML = '';
-    modalSlotTime.innerHTML = '';
+    $('#modalTitle').textContent = 'Crea nuovo slot';
+    $('#createSlotForm').classList.remove('hidden');
+    modalSlotDate.value = '';
+    modalSlotTime.value = '';
     confirmBtn.disabled = false;
     cancelBtn.disabled = false;
 
@@ -56,7 +58,10 @@ $('#createSlotBtn').addEventListener('click', (e) => {
     modal.classList.remove('hidden');
 });
 
-cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+cancelBtn.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    $('#createSlotForm').classList.add('hidden');
+});
 confirmBtn.addEventListener('click', async () => {
     // disabilita bottone per evitare doppio click
     console.log('confirmBtn clicked');
@@ -92,6 +97,7 @@ confirmBtn.addEventListener('click', async () => {
 
     // successo
     modal.classList.add('hidden');
+    $('#createSlotForm').classList.add('hidden');
     alert('Slot creato con successo!');
     await loadCreatedSlots();
 });

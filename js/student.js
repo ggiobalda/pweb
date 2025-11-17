@@ -117,112 +117,6 @@ async function loadAvailableSlots(){
     }
 }
 
-/* ----- Funzione per mostrare dettagli tutor (DOM puro, no try-catch) ----- */
-async function showTutorInfo(tutorId, tutorName) {
-    const modal = $('#modal');
-    const modalBody = $('#modalBody');
-    const modalTitle = $('#modalTitle');
-    const confirmBtn = $('#modalConfirm');
-    const cancelBtn = $('#modalCancel');
-
-    // Setup iniziale del Modale
-    modalTitle.textContent = 'Profilo Tutor: ' + tutorName;
-    modalBody.innerHTML = '';
-    modalBody.textContent = 'Caricamento profilo...';
-
-    // Nascondi il bottone di conferma prenotazione
-    confirmBtn.classList.add('hidden-force');
-
-    cancelBtn.textContent = 'Chiudi';
-    modal.classList.remove('hidden');
-
-    // Chiamata API diretta senza blocco try-catch
-    const res = await fetch('../api/tutor_details.php?id=' + tutorId);
-    const data = await res.json();
-
-    // Gestione errore API (es. tutor non trovato)
-    if (!data.success) {
-        modalBody.textContent = '';
-        const err = document.createElement('p');
-        err.className = 'error';
-        err.textContent = data.message;
-        modalBody.appendChild(err);
-        return;
-    }
-
-    const t = data.tutor;
-    const subs = data.subjects;
-
-    // Pulisce il messaggio di caricamento
-    modalBody.innerHTML = '';
-
-    // --- 1. Sezione Descrizione ---
-    const descSection = document.createElement('div');
-    descSection.className = 'tutor-detail-section';
-
-    const descTitle = document.createElement('strong');
-    descTitle.textContent = 'Chi sono:';
-    descSection.appendChild(descTitle);
-
-    const descP = document.createElement('p');
-    descP.className = 'tutor-desc';
-    // Usa una stringa di fallback se la descrizione è vuota
-    descP.textContent = t.description ? t.description : 'Nessuna descrizione fornita.';
-    descSection.appendChild(descP);
-
-    modalBody.appendChild(descSection);
-
-    // --- 2. Sezione Materie ---
-    const subSection = document.createElement('div');
-    subSection.className = 'tutor-detail-section';
-
-    const subTitle = document.createElement('strong');
-    subTitle.textContent = 'Materie insegnate:';
-    subSection.appendChild(subTitle);
-
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'tutor-tags';
-
-    if (subs.length > 0) {
-        // Ciclo sulle materie per creare i badge
-        subs.forEach(function (sub) {
-            const badge = document.createElement('span');
-            badge.className = 'badge info';
-            badge.textContent = sub;
-            tagsContainer.appendChild(badge);
-        });
-    } else {
-        const noSub = document.createElement('span');
-        noSub.textContent = 'Nessuna materia specificata.';
-        tagsContainer.appendChild(noSub);
-    }
-    subSection.appendChild(tagsContainer);
-    modalBody.appendChild(subSection);
-
-    // --- 3. Sezione Tariffe ---
-    const ratesSection = document.createElement('div');
-    ratesSection.className = 'tutor-detail-section';
-
-    const ratesTitle = document.createElement('strong');
-    ratesTitle.textContent = 'Tariffe:';
-    ratesSection.appendChild(ratesTitle);
-
-    const ul = document.createElement('ul');
-    ul.className = 'tutor-rates';
-
-    const liOnline = document.createElement('li');
-    liOnline.textContent = 'Online: €' + t.cost_online;
-    ul.appendChild(liOnline);
-
-    const liPresence = document.createElement('li');
-    liPresence.textContent = 'In presenza: €' + t.cost_presenza;
-    ul.appendChild(liPresence);
-
-    ratesSection.appendChild(ul);
-    modalBody.appendChild(ratesSection);
-}
-
-
 /* ----- tab prenotazioni future, passate e pagamenti: API = bookings_student.php ----- */
 async function loadStats() {
     // recupero container
@@ -442,6 +336,7 @@ async function loadStats() {
 }
 
 
+
 /* ----- gestione slot ----- */
 $('#applyFilters').addEventListener('click', () => loadAvailableSlots());
 
@@ -449,41 +344,96 @@ $('#applyFilters').addEventListener('click', () => loadAvailableSlots());
 /* ----- gestione modal  ----- */
 const modal = $('#modal');
 const modalBody = $('#modalBody');
+const modalTitle = $('#modalTitle');
 const confirmBtn = $('#modalConfirm');
 const cancelBtn = $('#modalCancel');
 
 function openConfirm(tutor, date, time, mode) {
     console.log('openConfirm called', { tutor, date, time, mode });
 
-    // formattazione iniziale del modal
+    // --- RESET COMPLETO STATO MODALE ---
+    modalTitle.textContent = 'Conferma prenotazione'; // Ripristina titolo
+    cancelBtn.textContent = 'Annulla'; // Ripristina testo annulla
+
+    // Ripristina bottone conferma
+    confirmBtn.classList.remove('hidden-force'); // Rimuovi la classe che lo nascondeva
+    confirmBtn.style.display = ''; // Rimuovi eventuali stili inline residui
+    confirmBtn.disabled = true; // Disabilita in attesa di scelta (se serve)
+    // -----------------------------------
+
     modalBody.innerHTML = '';
-    confirmBtn.disabled = true;
     cancelBtn.disabled = false;
 
-    // info base
-    const info = '<p>Stai per prenotare con <strong>' + escapeHtml(tutor) + '</strong> il <strong>' + displayDate(date) + '</strong> alle <strong>' + formatTime(time) + '</strong>.</p>';
+    const info = `<p>Stai per prenotare con <strong>${escapeHtml(tutor)}</strong> il <strong>${displayDate(date)}</strong> alle <strong>${formatTime(time)}</strong>.</p>`;
 
-    // scelta modalità (se necessario)
     if (mode === 'both') {
-        modalBody.innerHTML = info +
-            '<div><p>Seleziona la modalità:</p><label><input type="radio" name="chosenMode" value="online">Online</label><br><label><input type="radio" name="chosenMode" value="presenza">In presenza</label></div>';
-        confirmBtn.disabled = true;
-        const radios = $$('input[name="chosenMode"]');
-        radios.forEach((r) => {
-            r.addEventListener('change', () => {
-                if (radios[0].checked || radios[1].checked) {
-                    confirmBtn.disabled = false;
-                }
-            });
+        modalBody.innerHTML = info + `
+            <div>
+                <p>Seleziona la modalità:</p>
+                <div class="mode-chooser">
+                    <input type="radio" id="mOn" name="chosenMode" value="online"><label for="mOn">Online</label>
+                    <input type="radio" id="mPre" name="chosenMode" value="presenza"><label for="mPre">In presenza</label>
+                </div>
+            </div>`;
+
+        // Listener per abilitare conferma solo dopo scelta
+        const radios = modalBody.querySelectorAll('input[name="chosenMode"]');
+        radios.forEach(r => {
+            r.addEventListener('change', () => confirmBtn.disabled = false);
         });
     }
     else {
-        modalBody.innerHTML = info + '<p>Modalità: <strong>' + escapeHtml(mode) + '</strong></p>';
-        confirmBtn.disabled = false;
+        modalBody.innerHTML = info + `<p>Modalità: <strong>${escapeHtml(mode)}</strong></p>`;
+        confirmBtn.disabled = false; // Abilita subito se non c'è scelta
     }
 
-    // mostra modal
     modal.classList.remove('hidden');
+}
+
+/* ----- Funzione per mostrare dettagli tutor ----- */
+async function showTutorInfo(tutorId, tutorName) {
+
+    // Setup iniziale del Modale
+    modalTitle.textContent = 'Profilo Tutor: ' + tutorName;
+    modalBody.innerHTML = 'Caricamento profilo...';
+
+    // Nascondi il bottone di conferma prenotazione
+    confirmBtn.classList.add('hidden-force');
+    cancelBtn.textContent = 'Chiudi';
+    modal.classList.remove('hidden');
+
+    // Chiamata API diretta senza blocco try-catch
+    const res = await fetch('../api/tutor_details.php?id=' + tutorId);
+    const data = await res.json();
+
+    // Gestione errore API (es. tutor non trovato)
+    if (!data.success) {
+        modalBody.innerHTML = '<p class="error">' + data.message + '</p>';
+        return;
+    }
+
+    const t = data.tutor;
+    const subs = data.subjects;
+
+    // Pulisce il messaggio di caricamento
+    modalBody.innerHTML = '';
+
+    // Costruzione contenuto
+    const descSection = document.createElement('div');
+    descSection.className = 'tutor-detail-section';
+    descSection.innerHTML = `<strong>Chi sono:</strong><p class="tutor-desc">${t.description || 'Nessuna descrizione.'}</p>`;
+    modalBody.appendChild(descSection);
+
+    const subSection = document.createElement('div');
+    subSection.className = 'tutor-detail-section';
+    let tagsHtml = subs.length > 0 ? subs.map(s => `<span class="badge info">${s}</span>`).join(' ') : '<span>Nessuna materia.</span>';
+    subSection.innerHTML = `<strong>Materie insegnate:</strong><div class="tutor-tags">${tagsHtml}</div>`;
+    modalBody.appendChild(subSection);
+
+    const ratesSection = document.createElement('div');
+    ratesSection.className = 'tutor-detail-section';
+    ratesSection.innerHTML = `<strong>Tariffe:</strong><ul class="tutor-rates"><li>Online: €${t.cost_online}</li><li>In presenza: €${t.cost_presenza}</li></ul>`;
+    modalBody.appendChild(ratesSection);
 }
 
 // handler bottoni
