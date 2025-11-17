@@ -85,6 +85,17 @@ async function loadAvailableSlots(){
         head.appendChild(strong);
         head.appendChild(document.createTextNode(displayDate(s.date) + ' ' + formatTime(s.time)));
 
+        // info tutor
+        const infoBtn = document.createElement('button');
+        infoBtn.textContent = 'i';
+        infoBtn.classList.add('btn-small', 'btn-info-icon');
+
+        infoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showTutorInfo(s.tutor_id, s.tutor_name);
+        });
+        head.appendChild(infoBtn);
+
         // meta = modalità + prezzi
         const meta = document.createElement('div');
         meta.classList.add('meta');
@@ -104,6 +115,111 @@ async function loadAvailableSlots(){
         });
         console.log('added slot: ' + s.tutor_name + ', ' + s.date + ', ' + s.time + ', ' + s.mode + ', ' + priceText);
     }
+}
+
+/* ----- Funzione per mostrare dettagli tutor (DOM puro, no try-catch) ----- */
+async function showTutorInfo(tutorId, tutorName) {
+    const modal = $('#modal');
+    const modalBody = $('#modalBody');
+    const modalTitle = $('#modalTitle');
+    const confirmBtn = $('#modalConfirm');
+    const cancelBtn = $('#modalCancel');
+
+    // Setup iniziale del Modale
+    modalTitle.textContent = 'Profilo Tutor: ' + tutorName;
+    modalBody.innerHTML = '';
+    modalBody.textContent = 'Caricamento profilo...';
+
+    // Nascondi il bottone di conferma prenotazione
+    confirmBtn.classList.add('hidden-force');
+
+    cancelBtn.textContent = 'Chiudi';
+    modal.classList.remove('hidden');
+
+    // Chiamata API diretta senza blocco try-catch
+    const res = await fetch('../api/tutor_details.php?id=' + tutorId);
+    const data = await res.json();
+
+    // Gestione errore API (es. tutor non trovato)
+    if (!data.success) {
+        modalBody.textContent = '';
+        const err = document.createElement('p');
+        err.className = 'error';
+        err.textContent = data.message;
+        modalBody.appendChild(err);
+        return;
+    }
+
+    const t = data.tutor;
+    const subs = data.subjects;
+
+    // Pulisce il messaggio di caricamento
+    modalBody.innerHTML = '';
+
+    // --- 1. Sezione Descrizione ---
+    const descSection = document.createElement('div');
+    descSection.className = 'tutor-detail-section';
+
+    const descTitle = document.createElement('strong');
+    descTitle.textContent = 'Chi sono:';
+    descSection.appendChild(descTitle);
+
+    const descP = document.createElement('p');
+    descP.className = 'tutor-desc';
+    // Usa una stringa di fallback se la descrizione è vuota
+    descP.textContent = t.description ? t.description : 'Nessuna descrizione fornita.';
+    descSection.appendChild(descP);
+
+    modalBody.appendChild(descSection);
+
+    // --- 2. Sezione Materie ---
+    const subSection = document.createElement('div');
+    subSection.className = 'tutor-detail-section';
+
+    const subTitle = document.createElement('strong');
+    subTitle.textContent = 'Materie insegnate:';
+    subSection.appendChild(subTitle);
+
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'tutor-tags';
+
+    if (subs.length > 0) {
+        // Ciclo sulle materie per creare i badge
+        subs.forEach(function (sub) {
+            const badge = document.createElement('span');
+            badge.className = 'badge info';
+            badge.textContent = sub;
+            tagsContainer.appendChild(badge);
+        });
+    } else {
+        const noSub = document.createElement('span');
+        noSub.textContent = 'Nessuna materia specificata.';
+        tagsContainer.appendChild(noSub);
+    }
+    subSection.appendChild(tagsContainer);
+    modalBody.appendChild(subSection);
+
+    // --- 3. Sezione Tariffe ---
+    const ratesSection = document.createElement('div');
+    ratesSection.className = 'tutor-detail-section';
+
+    const ratesTitle = document.createElement('strong');
+    ratesTitle.textContent = 'Tariffe:';
+    ratesSection.appendChild(ratesTitle);
+
+    const ul = document.createElement('ul');
+    ul.className = 'tutor-rates';
+
+    const liOnline = document.createElement('li');
+    liOnline.textContent = 'Online: €' + t.cost_online;
+    ul.appendChild(liOnline);
+
+    const liPresence = document.createElement('li');
+    liPresence.textContent = 'In presenza: €' + t.cost_presenza;
+    ul.appendChild(liPresence);
+
+    ratesSection.appendChild(ul);
+    modalBody.appendChild(ratesSection);
 }
 
 
