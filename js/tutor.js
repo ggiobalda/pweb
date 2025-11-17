@@ -17,6 +17,7 @@ function switchTab(tab) {
     $$('.tabpage').forEach((p) => p.classList.add('hidden'));
     const target = '#tab-' + tab;
     $(target).classList.remove('hidden');
+    
     const titles = {
         slots: 'Crea una lezione o visualizza quelle disponibili',
         history: 'Visualizza lezioni passate e lo stato di pagamento',
@@ -25,6 +26,11 @@ function switchTab(tab) {
         config: 'Configura il tuo account tutor'
     };
     $('#pageTitle').textContent = titles[tab];
+
+    // Caricamento dinamico dati se necessario
+    if (tab === 'slots') loadCreatedSlots();
+    if (tab === 'history' || tab === 'upcoming' || tab === 'payments') loadStats();
+    if (tab === 'config') loadConfig();
 }
 
 
@@ -173,55 +179,63 @@ async function loadCreatedSlots() {
     }
 }
 
-/* ----- tab lezioni passate, future e pagamenti ----- */
+/* ----- tab statistiche ----- */
 async function loadStats() {
-    console.log('loadHistory called');
-    // recupero container
+    console.log('loadStats called');
     const containerHistory = $('#historyList');
     const containerUpcoming = $('#upcomingList');
     const containerPayments = $('#paymentsList');
 
-    // recupero dati
     const res = await fetch('../api/bookings_tutor.php');
     const data = await res.json();
     if (!data.success) {
         alert('Errore caricamento lezioni: ' + data.message);
-        container.innerHTML = 'Errore nel caricamento';
+        containerHistory.innerHTML = 'Errore nel caricamento';
         return;
     }
 
-    // per ogni prenotazione aggiungo il campo done (passata o futura)
-    data.bookings.forEach((s) => {
-        s.done = (new Date(s.date + 'T' + s.time) < new Date());
-        console.log(s);
-    });
-
-    // creazione slots per upcoming/history a seconda del campo 'done'
     containerUpcoming.innerHTML = '';
     containerHistory.innerHTML = '';
     containerPayments.innerHTML = '';
+
     let past = 0;
     let next = 0;
     let toHave = 0;
+
+    // Raggruppamento per studenti
+    const paymentsByStudent = {};
+
     for (let i = 0; i < data.bookings.length; i++) {
         const s = data.bookings[i];
-        console.log(s.mode);
+        const isDone = (new Date(s.date + 'T' + s.time) < new Date());
+        const isPaid = (s.paid == 1); // check robusto int/string
+
+        let mode, price;
+        if (s.chosenMode == 0) {
+            mode = s.mode;
+            price = (s.mode === 'online') ? s.cost_online : s.cost_presenza;
+        } else if (s.chosenMode == 1) {
+            mode = 'online';
+            price = s.cost_online;
+        } else {
+            mode = 'presenza';
+            price = s.cost_presenza;
+        }
+
+        /* --- 1. Lista Storico e Future --- */
         let container;
-        if (s.done) {
+        if (isDone) {
             container = containerHistory;
             past++;
-        }
-        else {
+        } else {
             container = containerUpcoming;
             next++;
         }
 
-        // div dello slot
         const wrapper = document.createElement('div');
         wrapper.classList.add('slot');
         container.appendChild(wrapper);
 
-        // header = tutor + data
         const head = document.createElement('div');
         head.classList.add('head');
         wrapper.appendChild(head);
@@ -230,157 +244,343 @@ async function loadStats() {
         head.appendChild(strong);
         head.appendChild(document.createTextNode(displayDate(s.date) + ' ' + formatTime(s.time)));
 
-        // meta = modalità + prezzi
         const meta = document.createElement('div');
         meta.classList.add('meta');
+        meta.innerHTML = `Modalità: ${mode}<br>Prezzo: €${price}`;
         wrapper.appendChild(meta);
-        let mode, price;
-        if (s.chosenMode == 0) {
-            mode = s.mode;
-            price = (s.mode === 'online') ? s.cost_online : s.cost_presenza;
-        }
-        else if (s.chosenMode == 1) {
-            mode = 'online';
-            price = s.cost_online;
-        }
-        else {
-            mode = 'presenza';
-            price = s.cost_presenza;
-        }
 
-        if (s.done && !s.paid)
-            toHave += parseFloat(price);
-        meta.textContent = 'Modalità: ' + mode + ' • Prezzo: ' + price;
-
-        if (s.done) {
-            // stato pagamento e bottone per segnare come pagato (solo per lezioni passate)
+        if (isDone) {
             const status = document.createElement('span');
-            status.textContent = s.paid ? 'Pagato' : 'Non pagato';
+            status.textContent = isPaid ? 'Pagato' : 'In attesa di pagamento';
+            // Unico stile mantenuto: colore stato
+            status.style.color = isPaid ? 'green' : '#b00020';
             status.style.fontWeight = 'bold';
-            status.style.color = s.paid ? 'green' : 'red';
             wrapper.appendChild(status);
+        }
 
-            if (!s.paid) {
-                const paidBtn = document.createElement('button');
-                paidBtn.classList.add('btn-small');
-                paidBtn.textContent = 'Segna come pagato';
-                paidBtn.addEventListener('click', async () => {
-                    console.log('Segna come pagato cliccato');
-                    paidBtn.disabled = true;
-                    const res = await fetch('../api/pay_single.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ booking_id: s.booking_id })
-                    });
-                    const data = await res.json();
-                    await loadStats();
-                });
-                wrapper.appendChild(paidBtn);
+        /* --- 2. Logica Pagamenti (Raggruppamento) --- */
+        if (isDone && !isPaid) {
+            toHave += parseFloat(price);
+
+            if (!paymentsByStudent[s.student_name]) {
+                paymentsByStudent[s.student_name] = {
+                    student_id: s.student_id,
+                    total: 0,
+                    lessons: []
+                };
             }
+
+            paymentsByStudent[s.student_name].total += parseFloat(price);
+            paymentsByStudent[s.student_name].lessons.push({
+                booking_id: s.booking_id,
+                date: s.date,
+                time: s.time,
+                mode: mode,
+                price: price
+            });
         }
     }
-    /*
-    // creazione slots per payments
+
+    /* --- 3. Generazione UI Tab Pagamenti --- */
     if (toHave > 0) {
-        // crea array con prenotazioni da pagare raggruppate per studente
-        const studentGrouped = {};
-        for (const s of data.bookings) {
-            if (!s.done || s.paid)
-                continue;
-            if (!studentGrouped[s.student_name])
-                studentGrouped[s.student_name] = [];
-            studentGrouped[s.student_name].push(s);
-        }
-        console.log('studentGrouped:', studentGrouped);
+        for (const [studentName, sData] of Object.entries(paymentsByStudent)) {
+            const studentCard = document.createElement('div');
+            studentCard.classList.add('slot');
+            // Nota: rimossi stili width, cursor, ecc.
+            containerPayments.appendChild(studentCard);
 
-        // per ogni student crea uno slot
-        for (const student in studentGrouped) {
-            const bookings = studentGrouped[student];
-            const wrapper = document.createElement('div');
-            wrapper.classList.add('slot');
-            containerPayments.appendChild(wrapper);
-
-            // header = student
+            // --- Header Card: Nome + Totale + Tasto Salda Tutto ---
             const head = document.createElement('div');
             head.classList.add('head');
-            wrapper.appendChild(head);
-            const strong = document.createElement('strong');
-            strong.textContent = student;
-            head.appendChild(strong);
+            // Nota: rimossi stili flex, border, padding
 
-            // meta = lista pagamenti da fare
-            const meta = document.createElement('div');
-            meta.classList.add('meta');
-            wrapper.appendChild(meta);
-            let total = 0;
+            const leftDiv = document.createElement('span');
+            leftDiv.innerHTML = `<strong>${studentName}</strong> <span class="badge warn">Totale: €${sData.total.toFixed(2)}</span>`;
+            head.appendChild(leftDiv);
+
+            const payAllBtn = document.createElement('button');
+            payAllBtn.textContent = 'Salda tutto';
+            payAllBtn.classList.add('btn'); // Delega stile al CSS
+
+            payAllBtn.onclick = async () => {
+                if (!confirm(`Confermi di voler segnare come pagate TUTTE le lezioni di ${studentName}?`)) return;
+
+                payAllBtn.disabled = true;
+                payAllBtn.textContent = '...';
+
+                try {
+                    const res = await fetch('../api/pay_all.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ student_id: sData.student_id })
+                    });
+                    const apiData = await res.json();
+
+                    if (apiData.success) {
+                        alert(apiData.message);
+                        await loadStats(); // Ricarica
+                    } else {
+                        alert('Errore: ' + apiData.message);
+                        payAllBtn.disabled = false;
+                        payAllBtn.textContent = 'Salda tutto';
+                    }
+                } catch (e) {
+                    alert('Errore di connessione');
+                    payAllBtn.disabled = false;
+                }
+            };
+            head.appendChild(payAllBtn);
+            studentCard.appendChild(head);
+
+            // --- Lista Lezioni Singole ---
             const ul = document.createElement('ul');
-            for (const s of bookings) {
-                let mode, price;
-                if (s.chosenMode == 0) {
-                    mode = s.mode;
-                    price = (s.mode === 'online') ? s.cost_online : s.cost_presenza;
-                }
-                else if (s.chosenMode == 1) {
-                    mode = 'online';
-                    price = s.cost_online;
-                }
-                else {
-                    mode = 'presenza';
-                    price = s.cost_presenza;
-                }
-                total += parseFloat(price);
+            // Nota: rimossi stili list-style, padding
 
+            sData.lessons.forEach(lesson => {
                 const li = document.createElement('li');
-                li.textContent = displayDate(s.date) + ' ' + formatTime(s.time) + ' • ' + mode + ' • €' + price;
+                // Nota: rimossi stili flex, border, padding
+
+                const infoSpan = document.createElement('span');
+                infoSpan.innerHTML = `${displayDate(lesson.date)} ${formatTime(lesson.time)} (${lesson.mode}) - <b>€${lesson.price}</b> `;
+                li.appendChild(infoSpan);
+
+                // Bottone Singolo "Salda"
+                const singleBtn = document.createElement('button');
+                singleBtn.classList.add('btn-small'); // Delega stile al CSS
+                singleBtn.textContent = 'Salda';
+
+                singleBtn.onclick = async () => {
+                    if (!confirm(`Confermi il pagamento di €${lesson.price} per questa singola lezione?`)) return;
+
+                    singleBtn.disabled = true;
+                    singleBtn.textContent = '...';
+
+                    try {
+                        const res = await fetch('../api/pay_single.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ booking_id: lesson.booking_id })
+                        });
+                        const respData = await res.json();
+                        if (respData.success) {
+                            await loadStats(); // Ricarica
+                        } else {
+                            alert('Errore: ' + respData.message);
+                            singleBtn.disabled = false;
+                            singleBtn.textContent = 'Salda';
+                        }
+                    } catch (e) {
+                        alert('Errore di rete');
+                        singleBtn.disabled = false;
+                        singleBtn.textContent = 'Salda';
+                    }
+                };
+
+                li.appendChild(singleBtn);
                 ul.appendChild(li);
-            }
-            meta.appendChild(ul);
-            const totalP = document.createElement('p');
-            totalP.style.fontWeight = 'bold';
-            totalP.textContent = 'Totale da pagare: €' + total.toFixed(2);
-            meta.appendChild(totalP);
-
-            
-            // bottone di pagamento
-            const btn = document.createElement('button');
-            btn.classList.add('btn-small');
-            btn.textContent = 'Paga ora';
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                const res = await fetch('../api/payments_create.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_name: student })
-                });
-                const data = await res.json();
-
-                if (!data.success) {
-                    alert('Errore pagamento: ' + data.message);
-                    btn.disabled = false;
-                    return;
-                }
-
-                alert('Pagamento effettuato con successo!');
-                await loadStats();
             });
-            wrapper.appendChild(btn);
-            
+            studentCard.appendChild(ul);
         }
     }
-        */
 
-    // aggiornamento statistiche
+    // Sidebar stats
     $('#statUpcoming').textContent = next;
     $('#statHours').textContent = past;
-    $('#statDue').textContent = '€' + toHave;
+    $('#statDue').textContent = '€' + toHave.toFixed(2);
 
-    // messaggi in caso di container vuoti
-    if (next === 0)
-        containerUpcoming.innerHTML = 'Nessuna prenotazione futura';
-    if (past === 0)
-        containerHistory.innerHTML = 'Nessuna prenotazione passata';
-    if (toHave === 0)
-        containerHistory.innerHTML = 'Nessun pagamento in sospeso';
+    if (next === 0) containerUpcoming.innerHTML = '<div class="empty">Nessuna lezione futura.</div>';
+    if (past === 0) containerHistory.innerHTML = '<div class="empty">Nessuna lezione passata.</div>';
+    if (toHave === 0) containerPayments.innerHTML = '<div class="empty">Nessun pagamento in sospeso!</div>';
+}
+
+/* ----- tab configurazione ----- */
+async function loadConfig() {
+    console.log('loadConfig called');
+    const container = $('#configList');
+    container.innerHTML = 'Caricamento configurazione...';
+    container.className = '';
+
+    // --- FIX SCROLLING PAGINA GENERALE ---
+    // Il css attuale di .main non ha overflow, glielo forziamo qui via JS
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+        mainElement.style.overflowY = 'auto';
+        mainElement.style.height = '100%'; // Assicura che occupi lo spazio
+    }
+    // -------------------------------------
+
+    const res = await fetch('../api/config_get.php');
+    const data = await res.json();
+
+    if (!data.success) {
+        alert('Errore caricamento config: ' + data.message);
+        container.innerHTML = 'Errore caricamento dati.';
+        return;
+    }
+
+    const profile = data.profile;
+    const allSubs = data.all_subjects;
+    const mySubs = data.my_subjects;
+
+    container.innerHTML = '';
+
+    const formWrapper = document.createElement('div');
+    formWrapper.classList.add('config-form');
+    // Aggiungiamo margine in fondo per essere sicuri che il bottone non sia attaccato al bordo
+    formWrapper.style.paddingBottom = '50px';
+    container.appendChild(formWrapper);
+
+    // --- A. Descrizione ---
+    const groupDesc = document.createElement('div');
+    groupDesc.classList.add('form-group');
+    const lblDesc = document.createElement('label');
+    lblDesc.textContent = 'Descrizione (max 500 car.):';
+    const txtDesc = document.createElement('textarea');
+    txtDesc.value = profile.description || '';
+    txtDesc.rows = 5;
+    groupDesc.appendChild(lblDesc);
+    groupDesc.appendChild(txtDesc);
+    formWrapper.appendChild(groupDesc);
+
+    // --- B. Tariffe ---
+    const groupCost = document.createElement('div');
+    groupCost.classList.add('form-row');
+
+    // Online
+    const divOnline = document.createElement('div');
+    divOnline.classList.add('form-group');
+    const lblOnline = document.createElement('label');
+    lblOnline.textContent = 'Tariffa Online (€):';
+    const inpOnline = document.createElement('input');
+    inpOnline.type = 'number';
+    inpOnline.step = '0.5';
+    inpOnline.min = '0';
+    inpOnline.value = profile.cost_online;
+    divOnline.appendChild(lblOnline);
+    divOnline.appendChild(inpOnline);
+    groupCost.appendChild(divOnline);
+
+    // Presenza
+    const divPres = document.createElement('div');
+    divPres.classList.add('form-group');
+    const lblPres = document.createElement('label');
+    lblPres.textContent = 'Tariffa Presenza (€):';
+    const inpPres = document.createElement('input');
+    inpPres.type = 'number';
+    inpPres.step = '0.5';
+    inpPres.min = '0';
+    inpPres.value = profile.cost_presenza;
+    divPres.appendChild(lblPres);
+    divPres.appendChild(inpPres);
+    groupCost.appendChild(divPres);
+
+    formWrapper.appendChild(groupCost);
+
+    // --- C. Materie ---
+    const groupSub = document.createElement('div');
+    groupSub.classList.add('form-group');
+    const lblSub = document.createElement('label');
+    lblSub.textContent = 'Seleziona le materie che insegni:';
+    groupSub.appendChild(lblSub);
+
+    const subContainer = document.createElement('div');
+    subContainer.classList.add('checkbox-grid');
+
+    // --- FIX SCROLLING LISTA MATERIE ---
+    subContainer.style.maxHeight = '300px';
+    subContainer.style.overflowY = 'scroll'; // 'scroll' forza la barra sempre visibile
+    subContainer.style.border = '1px solid #ccc';
+    subContainer.style.padding = '10px';
+    subContainer.style.display = 'block'; // Assicura comportamento a blocco
+    // -----------------------------------
+
+    allSubs.forEach(sub => {
+        // Creiamo un div wrapper per ogni riga per forzare l'andata a capo
+        const row = document.createElement('div');
+        row.style.padding = '4px 0';
+
+        const label = document.createElement('label');
+        label.classList.add('checkbox-item');
+        label.style.cursor = 'pointer';
+        label.style.display = 'flex'; // Allinea checkbox e testo
+        label.style.alignItems = 'center';
+
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.value = sub.id;
+        chk.name = 'subjects';
+        chk.style.marginRight = '10px'; // Spazio visivo
+
+        if (mySubs.some(myId => myId == sub.id)) {
+            chk.checked = true;
+        }
+
+        label.appendChild(chk);
+        label.appendChild(document.createTextNode(sub.name));
+
+        row.appendChild(label);
+        subContainer.appendChild(row);
+    });
+
+    groupSub.appendChild(subContainer);
+    formWrapper.appendChild(groupSub);
+
+    // --- D. Bottone Salva ---
+    const btnSave = document.createElement('button');
+    btnSave.textContent = 'Salva Modifiche';
+    btnSave.classList.add('btn');
+    btnSave.style.marginTop = '20px'; // Spazio extra sopra il bottone
+
+    btnSave.addEventListener('click', async () => {
+        const descVal = txtDesc.value.trim();
+        const costOnVal = parseFloat(inpOnline.value);
+        const costPrVal = parseFloat(inpPres.value);
+
+        const selectedSubs = [];
+        formWrapper.querySelectorAll('input[name="subjects"]:checked').forEach(c => {
+            selectedSubs.push(c.value);
+        });
+
+        if (descVal.length > 500) {
+            alert('Descrizione troppo lunga.'); return;
+        }
+        if (isNaN(costOnVal) || costOnVal < 0 || isNaN(costPrVal) || costPrVal < 0) {
+            alert('Tariffe non valide.'); return;
+        }
+        if (selectedSubs.length === 0) {
+            if (!confirm('Nessuna materia selezionata. Continuare?')) return;
+        }
+
+        btnSave.disabled = true;
+        btnSave.textContent = 'Salvataggio...';
+
+        try {
+            const resUpdate = await fetch('../api/config_update.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    description: descVal,
+                    cost_online: costOnVal,
+                    cost_presenza: costPrVal,
+                    subjects: selectedSubs
+                })
+            });
+            const dataUpdate = await resUpdate.json();
+
+            if (dataUpdate.success) {
+                alert('Salvato con successo!');
+            } else {
+                alert('Errore: ' + dataUpdate.message);
+            }
+        } catch (e) {
+            alert('Errore server');
+        }
+
+        btnSave.disabled = false;
+        btnSave.textContent = 'Salva Modifiche';
+    });
+
+    formWrapper.appendChild(btnSave);
 }
 
 /* ----- logout ----- */

@@ -22,7 +22,6 @@ function switchTab(tab) {
         book: 'Prenota una lezione filtrando fra quelle disponibili',
         upcoming: 'Visualizza le prossime lezioni prenotate',
         history: 'Visualizza le lezioni passate e lo stato di pagamento',
-        calendar: 'Calendario',
         payments: 'Visualizza e gestisci i tuoi pagamenti',
     };
     $('#pageTitle').textContent = titles[tab];
@@ -211,7 +210,6 @@ async function loadStats() {
                 alert('Prenotazione cancellata con successo!');
                 await loadAvailableSlots();
                 await loadStats();
-                // await loadCalendar();
             });
             wrapper.appendChild(btn);
         }
@@ -328,30 +326,6 @@ async function loadStats() {
 }
 
 
-/* ----- tab calendario ----- */
-/*
-async function loadCalendar() {
-    console.log('loadCalendar called');
-    const container = $('#miniCalendar');
-    const now = new Date();
-
-    // fetch prenotazioni dello studente
-    let res = await fetch('../api/bookings_student.php');
-    let data = await res.json();
-    if (!data.success) {
-        alert('Errore caricamento prenotazioni: ' + data.message);
-        container.innerHTML = 'Errore nel caricamento delle prenotazioni';
-        return;
-    }
-
-    const bookings = data.bookings;
-    console.log('[loadCalendar] API bookings:', bookings);
-
-
-}
-*/
-
-
 /* ----- gestione slot ----- */
 $('#applyFilters').addEventListener('click', () => loadAvailableSlots());
 
@@ -455,6 +429,5 @@ async function init() {
     // caricamento vari pannelli
     await loadAvailableSlots();
     await loadStats();
-    // await loadCalendar();
 }
 init();

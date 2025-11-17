@@ -11,34 +11,38 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$booking_id = $input['booking_id'];
+$booking_id = (int)($input['booking_id'] ?? 0);
+
+if ($booking_id <= 0) {
+    echo json_encode(['success' => false, 'message' => '[pay_single.php] ID prenotazione non valido']);
+    exit;
+}
 
 try {
-    // verifica che la lezione esista e appartenga al tutor
+    // CORREZIONE 1: Join con slots per verificare che la lezione appartenga al tutor loggato
     $sql = '
-        SELECT id
-        FROM bookings
-        WHERE id = ? AND tutor_id = ?
-        ';
+        SELECT b.id
+        FROM bookings b
+        JOIN slots s ON b.slot_id = s.id
+        WHERE b.id = ? AND s.tutor_id = ?
+    ';
     $check_booking = $pdo->prepare($sql);
     $check_booking->execute([$booking_id, $_SESSION['user_id']]);
-    if ((int)$check_booking->fetchColumn() === 0) {
-        echo json_encode(['success' => false, 'message' => '[pay_single.php] Lezione non trovata']);
+
+    if (!$check_booking->fetch()) {
+        echo json_encode(['success' => false, 'message' => '[pay_single.php] Lezione non trovata o non di tua competenza']);
         exit;
     }
 
-    // pagamento della lezione
+    // CORREZIONE 2: UPDATE invece di INSERT per cambiare lo stato a "pagato"
     $pdo->beginTransaction();
-    $sql = '
-        INSERT INTO bookings (paid)
-        VALUES (1)
-        WHERE id = ?
-    ';
-    $statement = $pdo->prepare($sql);
-    $statement->execute([$booking_id]);
+    $sql = 'UPDATE bookings SET paid = 1 WHERE id = ?';
+    $update = $pdo->prepare($sql);
+    $update->execute([$booking_id]);
     $pdo->commit();
+
     echo json_encode(['success' => true, 'message' => '[pay_single.php] Lezione pagata con successo']);
-}
-catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => '[pay_single.php] Errore server']);
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    echo json_encode(['success' => false, 'message' => '[pay_single.php] Errore server: ' . $e->getMessage()]);
 }

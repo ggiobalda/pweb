@@ -30,16 +30,16 @@ CREATE TABLE subject (
 );
 LOCK TABLES subject WRITE;
 INSERT INTO subject (name) VALUES
-('Matematica'),
-('Fisica'),
-('Chimica'),
-('Informatica'),
 ('Biologia'),
-('Storia'),
+('Chimica'),
+('Fisica'),
+('Francese'),
 ('Geografia'),
-('Italiano'),
+('Informatica'),
 ('Inglese'),
-('Francese');
+('Italiano'),
+('Matematica'),
+('Storia');
 UNLOCK TABLES;
 
 /****** tabella tutor_subject ******/
