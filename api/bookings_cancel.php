@@ -82,7 +82,8 @@ try {
         'success' => true,
         'message' => '[bookings_cancel.php] Prenotazione cancellata con successo'
     ]);
-} catch (Exception $e) {
+}
+catch (Exception $e) {
     echo json_encode([
         'success' => false,
         'message' => '[bookings_cancel.php] Errore server'
