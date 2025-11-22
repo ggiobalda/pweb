@@ -5,8 +5,11 @@ require 'config.php';
 session_start();
 
 // controllo credenziali
-if(!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'student'){
-    echo json_encode(['success' => false, 'message' => '[bookings_student.php] Accesso negato']);
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'student') {
+    echo json_encode([
+        'success' => false,
+        'message' => '[bookings_student.php] Accesso negato'
+    ]);
     exit;
 }
 
@@ -23,8 +26,14 @@ try {
     $statement = $pdo->prepare($sql);
     $statement->execute([$_SESSION['user_id']]);
     $rows = $statement->fetchAll();
-    echo json_encode(['success' => true, 'bookings' => $rows]); 
+    echo json_encode([
+        'success' => true,
+        'bookings' => $rows
+    ]);
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => '[bookings_student.php] Errore server'
+    ]);
 }
-catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => '[bookings_student.php] Errore server']);
-}
+?>

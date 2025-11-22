@@ -6,7 +6,10 @@ session_start();
 
 // controllo credenziali
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
-    echo json_encode(['success' => false, 'message' => '[pay_all.php] Accesso negato']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_all.php] Accesso negato'
+    ]);
     exit;
 }
 
@@ -14,7 +17,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
 $input = json_decode(file_get_contents('php://input'), true);
 $student_id = (int)$input['student_id'];
 if (!$student_id) {
-    echo json_encode(['success' => false, 'message' => '[pay_all.php] ID studente mancante']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_all.php] ID studente mancante'
+    ]);
     exit;
 }
 
@@ -45,5 +51,9 @@ try {
     ]);
 } catch (Exception $e) {
     $pdo->rollBack();
-    echo json_encode(['success' => false, 'message' => '[pay_all.php] Errore server: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_all.php] Errore server: ' . $e->getMessage()
+    ]);
 }
+?>

@@ -18,8 +18,14 @@ try {
     $statement = $pdo->prepare($sql);
     $statement->execute();
     $rows = $statement->fetchAll();
-    echo json_encode(['success' => true, 'slots' => $rows]); 
+    echo json_encode([
+        'success' => true,
+        'slots' => $rows
+    ]);
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => '[slots_available.php] Errore server'
+    ]);
 }
-catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => '[slots_available.php] Errore server']);
-}
+?>

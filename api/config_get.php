@@ -4,28 +4,47 @@ header('Content-Type: application/json; charset=utf-8');
 require 'config.php';
 session_start();
 
+// controllo credenziali
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
-    echo json_encode(['success' => false, 'message' => '[config_get.php] Accesso negato']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[config_get.php] Accesso negato'
+    ]);
     exit;
 }
 
 try {
-    // 1. Dati profilo
-    $stmt = $pdo->prepare('SELECT description, cost_online, cost_presenza FROM tutor WHERE id = ?');
+    // recupero dati del profilo tutor e materie
+    $sql = '
+        SELECT description, cost_online, cost_presenza
+        FROM tutor
+        WHERE id = ?
+    ';
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([$_SESSION['user_id']]);
     $profile = $stmt->fetch();
 
-    // 2. Elenco completo materie (per generare le checkbox)
-    $stmt = $pdo->prepare('SELECT id, name FROM subject ORDER BY name ASC');
+    // recupero tutte le materie disponibili
+    $sql2 = '
+        SELECT id, name
+        FROM subject
+        ORDER BY subject.name ASC
+    ';
+    $stmt = $pdo->prepare($sql2);
     $stmt->execute();
     $all_subjects = $stmt->fetchAll();
 
-    // 3. Materie già selezionate dal tutor
-    $stmt = $pdo->prepare('SELECT subject_id FROM tutor_subject WHERE tutor_id = ?');
+    // recupero materie associate al tutor
+    $sql3 = '
+        SELECT subject_id
+        FROM tutor_subject
+        WHERE tutor_id = ?
+    ';
+    $stmt = $pdo->prepare($sql3);
     $stmt->execute([$_SESSION['user_id']]);
     $rows = $stmt->fetchAll();
 
-    // Converto in array semplice di ID (es: [1, 3, 5])
+    // converto in array di id
     $my_subjects = array_map(function ($row) {
         return $row['subject_id'];
     }, $rows);
@@ -37,5 +56,9 @@ try {
         'my_subjects' => $my_subjects
     ]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => '[config_get.php] Errore: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => '[config_get.php] Errore: ' . $e->getMessage()
+    ]);
 }
+?>

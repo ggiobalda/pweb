@@ -4,47 +4,71 @@ header('Content-Type: application/json; charset=utf-8');
 require 'config.php';
 session_start();
 
+// controllo credenziali
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
-    echo json_encode(['success' => false, 'message' => '[config_update.php] Accesso negato']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[config_update.php] Accesso negato'
+    ]);
     exit;
 }
 
+// recupero input e controllo
 $input = json_decode(file_get_contents('php://input'), true);
-$desc = trim($input['description'] ?? '');
-$cost_online = (float)($input['cost_online'] ?? 0);
-$cost_presenza = (float)($input['cost_presenza'] ?? 0);
-$subjects = $input['subjects'] ?? []; // Array di ID materie (dal JS)
-
-// Validazione base
+$desc = trim($input['description']);
+$cost_online = (float)($input['cost_online']);
+$cost_presenza = (float)($input['cost_presenza']);
+$subjects = $input['subjects'];
 if (strlen($desc) > 500) {
-    echo json_encode(['success' => false, 'message' => 'Descrizione troppo lunga']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Descrizione troppo lunga'
+    ]);
     exit;
 }
 
 try {
     $pdo->beginTransaction();
 
-    // 1. Aggiorna info tutor
-    $sql = 'UPDATE tutor SET description = ?, cost_online = ?, cost_presenza = ? WHERE id = ?';
+    // aggiorna desc e costi    
+    $sql = '
+        UPDATE tutor
+        SET description = ?, cost_online = ?, cost_presenza = ?
+        WHERE id = ?
+    ';
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$desc, $cost_online, $cost_presenza, $_SESSION['user_id']]);
 
-    // 2. Aggiorna materie: strategia "Cancella tutto e reinserisci"
-    // Prima rimuovi le vecchie associazioni
-    $del = $pdo->prepare('DELETE FROM tutor_subject WHERE tutor_id = ?');
+    // rimozione delle vecchie materie
+    $sql2 = '
+        DELETE FROM tutor_subject
+        WHERE tutor_id = ?
+    ';
+    $del = $pdo->prepare($sql2);
     $del->execute([$_SESSION['user_id']]);
 
-    // Poi inserisci quelle nuove selezionate
+    // inserimento quelle nuove materie
     if (!empty($subjects)) {
-        $ins = $pdo->prepare('INSERT INTO tutor_subject (tutor_id, subject_id) VALUES (?, ?)');
+        $sql3 = '
+            INSERT INTO tutor_subject (tutor_id, subject_id)
+            VALUES (?, ?)
+        ';
+        $ins = $pdo->prepare($sql3);
         foreach ($subjects as $sub_id) {
             $ins->execute([$_SESSION['user_id'], (int)$sub_id]);
         }
     }
 
     $pdo->commit();
-    echo json_encode(['success' => true, 'message' => 'Configurazione salvata']);
+    echo json_encode([
+        'success' => true,
+        'message' => 'Configurazione salvata'
+    ]);
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(['success' => false, 'message' => '[config_update.php] Errore: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => '[config_update.php] Errore: ' . $e->getMessage()
+    ]);
 }
+?>

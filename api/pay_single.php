@@ -6,7 +6,10 @@ session_start();
 
 // controllo credenziali
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
-    echo json_encode(['success' => false, 'message' => '[pay_single.php] Accesso negato']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_single.php] Accesso negato'
+    ]);
     exit;
 }
 
@@ -14,7 +17,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
 $input = json_decode(file_get_contents('php://input'), true);
 $booking_id = (int)($input['booking_id']);
 if ($booking_id <= 0) {
-    echo json_encode(['success' => false, 'message' => '[pay_single.php] ID prenotazione non valido']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_single.php] ID prenotazione non valido'
+    ]);
     exit;
 }
 
@@ -30,24 +36,33 @@ try {
     $check_booking->execute([$booking_id, $_SESSION['user_id']]);
 
     if (!$check_booking->fetch()) {
-        echo json_encode(['success' => false, 'message' => '[pay_single.php] Lezione non trovata o non di tua competenza']);
+        echo json_encode([
+            'success' => false,
+            'message' => '[pay_single.php] Lezione non trovata o non di tua competenza'
+        ]);
         exit;
     }
 
     // transazione per segnare la lezione come pagata
     $pdo->beginTransaction();
-    $sql = '
+    $sql2 = '
         UPDATE bookings
         SET paid = 1
         WHERE id = ?
     ';
-    $update = $pdo->prepare($sql);
+    $update = $pdo->prepare($sql2);
     $update->execute([$booking_id]);
     $pdo->commit();
 
-    echo json_encode(['success' => true, 'message' => '[pay_single.php] Lezione pagata con successo']);
-}
-catch (Exception $e) {
+    echo json_encode([
+        'success' => true,
+        'message' => '[pay_single.php] Lezione pagata con successo'
+    ]);
+} catch (Exception $e) {
     $pdo->rollBack();
-    echo json_encode(['success' => false, 'message' => '[pay_single.php] Errore server: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => '[pay_single.php] Errore server: ' . $e->getMessage()
+    ]);
 }
+?>
