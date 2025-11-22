@@ -41,6 +41,34 @@ try {
         exit;
     }
 
+    // controlla che non sia entro le prossima 24h
+    $sql1 = '
+        SELECT date, time
+        FROM slots
+        WHERE id = (
+            SELECT slot_id
+            FROM bookings
+            WHERE id = ?
+        )
+    ';
+    $stmt_time = $pdo->prepare($sql1);
+    $stmt_time->execute([$booking_id]);
+    $slot = $stmt_time->fetch();
+
+    $slot_datetime = new DateTime($slot['date'] . ' ' . $slot['time']);
+    $now = new DateTime();
+
+    // differenza e controllo
+    $interval = $now->diff($slot_datetime);
+    $hours = ($interval->days * 24) + $interval->h;
+    if ($slot_datetime <= $now || ($hours < 24 && $interval->invert == 0)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Troppo tardi per cancellare'
+        ]);
+        exit;
+    }
+
     // cancellazione prenotazione
     $pdo->beginTransaction();
     $sql2 = '
