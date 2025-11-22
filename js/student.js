@@ -28,7 +28,7 @@ function switchTab(tab) {
 }
 
 
-/* ----- tab per prenotare: API = slots_available.php ----- */
+/* ----- tab prenotazione ----- */
 async function loadAvailableSlots(){
     // recupero container
     const container = $('#slotsList');
@@ -117,7 +117,10 @@ async function loadAvailableSlots(){
     }
 }
 
-/* ----- tab prenotazioni future, passate e pagamenti: API = bookings_student.php ----- */
+$('#applyFilters').addEventListener('click', () => loadAvailableSlots());
+
+
+/* ----- tabs lezioni future, passate e pagamenti ----- */
 async function loadStats() {
     // recupero container
     const containerUpcoming = $('#upcomingList');
@@ -307,32 +310,6 @@ async function loadStats() {
             totalP.style.fontWeight = 'bold';
             totalP.textContent = 'Totale da pagare: €' + total.toFixed(2);
             meta.appendChild(totalP);
-
-            /* todo
-            // bottone di pagamento
-            const btn = document.createElement('button');
-            btn.classList.add('btn-small');
-            btn.textContent = 'Paga ora';
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                const res = await fetch('../api/payments_create.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tutor_name: tutor })
-                });
-                const data = await res.json();
-
-                if (!data.success) {
-                    alert('Errore pagamento: ' + data.message);
-                    btn.disabled = false;
-                    return;
-                }
-
-                alert('Pagamento effettuato con successo!');
-                await loadStats();
-            });
-            wrapper.appendChild(btn);
-            */
         }
     }
 
@@ -351,12 +328,7 @@ async function loadStats() {
 }
 
 
-
-/* ----- gestione slot ----- */
-$('#applyFilters').addEventListener('click', () => loadAvailableSlots());
-
-
-/* ----- gestione modal  ----- */
+/* ----- gestione modal (sia prenotazione che info tutor) ----- */
 const modal = $('#modal');
 const modalBody = $('#modalBody');
 const modalTitle = $('#modalTitle');
@@ -366,30 +338,71 @@ const cancelBtn = $('#modalCancel');
 function openConfirm(tutor, date, time, mode) {
     console.log('openConfirm called', { tutor, date, time, mode });
 
-    // --- RESET COMPLETO STATO MODALE ---
-    modalTitle.textContent = 'Conferma prenotazione'; // Ripristina titolo
-    cancelBtn.textContent = 'Annulla'; // Ripristina testo annulla
-
-    // Ripristina bottone conferma
-    confirmBtn.classList.remove('hidden-force'); // Rimuovi la classe che lo nascondeva
-    confirmBtn.style.display = ''; // Rimuovi eventuali stili inline residui
-    confirmBtn.disabled = true; // Disabilita in attesa di scelta (se serve)
-    // -----------------------------------
-
+    // reset del modal a stato iniziale
+    modalTitle.textContent = 'Conferma prenotazione';
     modalBody.innerHTML = '';
+    confirmBtn.classList.remove('hidden-force'); // rimuove la classe che lo nascondeva
+    confirmBtn.style.display = '';
+    confirmBtn.disabled = true;
+    cancelBtn.textContent = 'Annulla';
     cancelBtn.disabled = false;
 
-    const info = `<p>Stai per prenotare con <strong>${escapeHtml(tutor)}</strong> il <strong>${displayDate(date)}</strong> alle <strong>${formatTime(time)}</strong>.</p>`;
+    // creazione contenuto modal
+    const info = document.createElement('p');
+    modalBody.appendChild(info);
 
-    if (mode === 'both') {
-        modalBody.innerHTML = info + `
-            <div>
-                <p>Seleziona la modalità:</p>
-                <div class="mode-chooser">
-                    <input type="radio" id="mOn" name="chosenMode" value="online"><label for="mOn">Online</label>
-                    <input type="radio" id="mPre" name="chosenMode" value="presenza"><label for="mPre">In presenza</label>
-                </div>
-            </div>`;
+    const strong1 = document.createElement('strong');
+    strong1.textContent = escapeHtml(tutor);
+
+    const strong2 = document.createElement('strong');
+    strong2.textContent = displayDate(date);
+
+    const strong3 = document.createElement('strong');
+    strong3.textContent = formatTime(time);
+
+    info.appendChild(document.createTextNode('Stai per prenotare con '));
+    info.appendChild(strong1);
+    info.appendChild(document.createTextNode(' il '));
+    info.appendChild(strong2);
+    info.appendChild(document.createTextNode(' alle '));
+    info.appendChild(strong3);
+    info.appendChild(document.createTextNode('.'));
+
+    if (mode === 'both') { // caso scelta modalità
+        const modalDiv = document.createElement('div');
+        modalBody.appendChild(modalDiv);
+
+        const p = document.createElement('p');
+        p.textContent = 'Seleziona la modalità:';
+        modalDiv.appendChild(p);
+
+        const modeChooser = document.createElement('div');
+        modeChooser.className = 'mode-chooser';
+        modalDiv.appendChild(modeChooser);
+
+        const inputOn = document.createElement('input');
+        inputOn.type = 'radio';
+        inputOn.id = 'mOn';
+        inputOn.name = 'chosenMode';
+        inputOn.value = 'online';
+        modeChooser.appendChild(inputOn);
+
+        const labelOn = document.createElement('label');
+        labelOn.htmlFor = 'mOn';
+        labelOn.textContent = 'Online';
+        modeChooser.appendChild(labelOn);
+
+        const inputPre = document.createElement('input');
+        inputPre.type = 'radio';
+        inputPre.id = 'mPre';
+        inputPre.name = 'chosenMode';
+        inputPre.value = 'presenza';
+        modeChooser.appendChild(inputPre);
+
+        const labelPre = document.createElement('label');
+        labelPre.htmlFor = 'mPre';
+        labelPre.textContent = 'In presenza';
+        modeChooser.appendChild(labelPre);
 
         // Listener per abilitare conferma solo dopo scelta
         const radios = modalBody.querySelectorAll('input[name="chosenMode"]');
@@ -397,15 +410,16 @@ function openConfirm(tutor, date, time, mode) {
             r.addEventListener('change', () => confirmBtn.disabled = false);
         });
     }
-    else {
-        modalBody.innerHTML = info + `<p>Modalità: <strong>${escapeHtml(mode)}</strong></p>`;
-        confirmBtn.disabled = false; // Abilita subito se non c'è scelta
+    else { // caso modalità singola
+        const strongMode = document.createElement('strong');
+        strongMode.textContent = escapeHtml(mode);
+        modalBody.appendChild(document.createTextNode('Modalità: '));
+        modalBody.appendChild(strongMode);
+        confirmBtn.disabled = false; // abilita subito conferma
     }
-
     modal.classList.remove('hidden');
 }
 
-/* ----- Funzione per mostrare dettagli tutor ----- */
 async function showTutorInfo(tutorId, tutorName) {
     console.log('showTutorInfo called', { tutorId, tutorName });
 
@@ -544,8 +558,7 @@ async function init() {
     // recupero dati sessione e check
     const res = await fetch('../api/session.php');
     const data = await res.json();
-    if (!data.logged || data.role !== 'student'){
-        // non loggato come studente, redirect alla login
+    if (!data.logged || data.role !== 'student') { // non loggato come studente, redirect alla login
         window.location.href = '../index.html';
         return;
     }

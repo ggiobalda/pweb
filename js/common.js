@@ -1,9 +1,10 @@
 // common.js
 
-/* ------------------- helper ------------------- */
+// helper per query DOM
 const $ = (target) => document.querySelector(target);
 const $$ = (target) => Array.from(document.querySelectorAll(target));
 
+// funzione per eseguire escaping di stringhe HTML
 function escapeHtml(str) {
     if (str === null || str === undefined)
         return '';
@@ -18,6 +19,7 @@ function escapeHtml(str) {
     });
 }
 
+// formattazione date e orari
 function displayDate(d) {
     if (!d)
         return '';

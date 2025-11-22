@@ -4,6 +4,7 @@
 $$('.sidebar nav a').forEach((a) => {
     a.addEventListener('click', (e) => {
         e.preventDefault();
+
         // attivazione tab selezionata
         $$('.sidebar nav a').forEach((x) => x.classList.remove('active'));
         a.classList.add('active');
@@ -27,7 +28,7 @@ function switchTab(tab) {
     };
     $('#pageTitle').textContent = titles[tab];
 
-    // Caricamento dinamico dati se necessario
+    // caricamento dinamico dati se necessario
     if (tab === 'slots') loadCreatedSlots();
     if (tab === 'history' || tab === 'upcoming' || tab === 'payments') loadStats();
     if (tab === 'config') loadConfig();
@@ -184,6 +185,7 @@ async function loadCreatedSlots() {
         wrapper.appendChild(btn);
     }
 }
+
 
 /* ----- statistiche per varie tabs ----- */
 async function loadStats() {
@@ -406,6 +408,7 @@ async function loadStats() {
     if (past === 0) containerHistory.innerHTML = '<div class="empty">Nessuna lezione passata.</div>';
     if (toHave === 0) containerPayments.innerHTML = '<div class="empty">Nessun pagamento in sospeso.</div>';
 }
+
 
 /* ----- tab configurazione ----- */
 async function loadConfig() {
