@@ -6,7 +6,10 @@ session_start();
 
 // controllo credenziali
 if(!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor'){
-    echo json_encode(['success' => false, 'message' => '[slots_create.php] Accesso negato']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[slots_create.php] Accesso negato'
+    ]);
     exit;
 }
 
@@ -18,7 +21,10 @@ $mode = $input['mode'];
 
 // controllo input
 if (!$date || !$time || !$mode){
-    echo json_encode(['success' => false, 'message' => '[slots_create.php] Dati slot mancanti']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[slots_create.php] Dati slot mancanti'
+    ]);
     exit;
 }
 
@@ -27,11 +33,17 @@ try {
     $sql = '
         INSERT INTO slots (tutor_id, date, time, mode)
         VALUES (?, ?, ?, ?)
-        ';
+    ';
     $statement = $pdo->prepare($sql);
     $statement->execute([$_SESSION['user_id'], $date, $time, $mode]);
-    echo json_encode(['success' => true, 'message' => '[slots_create.php] Slot creato con successo']);
+    echo json_encode([
+        'success' => true,
+        'message' => '[slots_create.php] Slot creato con successo'
+    ]);
 }
 catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => '[slots_create.php] Errore server']);
+    echo json_encode([
+        'success' => false,
+        'message' => '[slots_create.php] Errore server'
+    ]);
 }

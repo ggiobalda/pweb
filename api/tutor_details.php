@@ -6,7 +6,10 @@ require 'config.php';
 // controllo tutor_id
 $tutor_id = (int)($_GET['id'] ?? 0);
 if ($tutor_id <= 0) {
-    echo json_encode(['success' => false, 'message' => 'ID Tutor mancante']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'ID Tutor mancante'
+    ]);
     exit;
 }
 
@@ -21,7 +24,10 @@ try {
     $stmt->execute([$tutor_id]);
     $tutor = $stmt->fetch();
     if (!$tutor) {
-        echo json_encode(['success' => false, 'message' => 'Tutor non trovato']);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Tutor non trovato'
+        ]);
         exit;
     }
 
@@ -44,5 +50,8 @@ try {
     ]);
 }
 catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Errore server']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Errore server'
+    ]);
 }
