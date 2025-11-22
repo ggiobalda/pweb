@@ -10,16 +10,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
     exit;
 }
 
+// recupero e controllo input
 $input = json_decode(file_get_contents('php://input'), true);
-$booking_id = (int)($input['booking_id'] ?? 0);
-
+$booking_id = (int)($input['booking_id']);
 if ($booking_id <= 0) {
     echo json_encode(['success' => false, 'message' => '[pay_single.php] ID prenotazione non valido']);
     exit;
 }
 
 try {
-    // CORREZIONE 1: Join con slots per verificare che la lezione appartenga al tutor loggato
+    // recupero la prenotazione per verificare che esista e appartenga al tutor loggato
     $sql = '
         SELECT b.id
         FROM bookings b
@@ -34,15 +34,20 @@ try {
         exit;
     }
 
-    // CORREZIONE 2: UPDATE invece di INSERT per cambiare lo stato a "pagato"
+    // transazione per segnare la lezione come pagata
     $pdo->beginTransaction();
-    $sql = 'UPDATE bookings SET paid = 1 WHERE id = ?';
+    $sql = '
+        UPDATE bookings
+        SET paid = 1
+        WHERE id = ?
+    ';
     $update = $pdo->prepare($sql);
     $update->execute([$booking_id]);
     $pdo->commit();
 
     echo json_encode(['success' => true, 'message' => '[pay_single.php] Lezione pagata con successo']);
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+}
+catch (Exception $e) {
+    $pdo->rollBack();
     echo json_encode(['success' => false, 'message' => '[pay_single.php] Errore server: ' . $e->getMessage()]);
 }

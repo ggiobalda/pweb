@@ -185,13 +185,15 @@ async function loadCreatedSlots() {
     }
 }
 
-/* ----- tab statistiche ----- */
+/* ----- statistiche per varie tabs ----- */
 async function loadStats() {
     console.log('loadStats called');
+    // recupero containers
     const containerHistory = $('#historyList');
     const containerUpcoming = $('#upcomingList');
     const containerPayments = $('#paymentsList');
 
+    // recupero dati
     const res = await fetch('../api/bookings_tutor.php');
     const data = await res.json();
     if (!data.success) {
@@ -200,71 +202,77 @@ async function loadStats() {
         return;
     }
 
+    // inizializzazione container e variabili
     containerUpcoming.innerHTML = '';
     containerHistory.innerHTML = '';
     containerPayments.innerHTML = '';
-
     let past = 0;
     let next = 0;
     let toHave = 0;
-
-    // Raggruppamento per studenti
     const paymentsByStudent = {};
 
+    // loop su tutte le prenotazioni, suddivise in future e passate
     for (let i = 0; i < data.bookings.length; i++) {
+        // dati per gli slot
         const s = data.bookings[i];
-        const isDone = (new Date(s.date + 'T' + s.time) < new Date());
-        const isPaid = (s.paid == 1); // check robusto int/string
-
-        let mode, price;
+        const isDone = (new Date(s.date + 'T' + s.time) < new Date()); 
+        const isPaid = (s.paid == 1);
+        let mode, price, container;
         if (s.chosenMode == 0) {
             mode = s.mode;
             price = (s.mode === 'online') ? s.cost_online : s.cost_presenza;
-        } else if (s.chosenMode == 1) {
+        }
+        else if (s.chosenMode == 1) {
             mode = 'online';
             price = s.cost_online;
-        } else {
+        }
+        else {
             mode = 'presenza';
             price = s.cost_presenza;
         }
 
-        /* --- 1. Lista Storico e Future --- */
-        let container;
         if (isDone) {
             container = containerHistory;
             past++;
-        } else {
+        }
+        else {
             container = containerUpcoming;
             next++;
         }
 
+        // div dello slot
         const wrapper = document.createElement('div');
         wrapper.classList.add('slot');
         container.appendChild(wrapper);
 
+        // head = studente + data
         const head = document.createElement('div');
         head.classList.add('head');
         wrapper.appendChild(head);
+        
         const strong = document.createElement('strong');
         strong.textContent = s.student_name;
         head.appendChild(strong);
         head.appendChild(document.createTextNode(displayDate(s.date) + ' ' + formatTime(s.time)));
 
+        // meta = modalità + prezzo
         const meta = document.createElement('div');
         meta.classList.add('meta');
-        meta.innerHTML = `Modalità: ${mode}<br>Prezzo: €${price}`;
         wrapper.appendChild(meta);
+        meta.appendChild(document.createTextNode('Modalità: ' + mode));
+        meta.appendChild(document.createElement('br'));
+        meta.appendChild(document.createTextNode('Prezzo: €' + price));
 
+        // stato pagamento (solo per lezioni concluse)
         if (isDone) {
             const status = document.createElement('span');
             status.textContent = isPaid ? 'Pagato' : 'In attesa di pagamento';
-            // Unico stile mantenuto: colore stato
             status.style.color = isPaid ? 'green' : '#b00020';
             status.style.fontWeight = 'bold';
             wrapper.appendChild(status);
         }
 
-        /* --- 2. Logica Pagamenti (Raggruppamento) --- */
+        // creazione struttura dati per tab pagamenti        
         if (isDone && !isPaid) {
             toHave += parseFloat(price);
 
@@ -287,134 +295,127 @@ async function loadStats() {
         }
     }
 
-    /* --- 3. Generazione UI Tab Pagamenti --- */
+    // creazione slots pagamenti
     if (toHave > 0) {
         for (const [studentName, sData] of Object.entries(paymentsByStudent)) {
-            const studentCard = document.createElement('div');
-            studentCard.classList.add('slot');
-            // Nota: rimossi stili width, cursor, ecc.
-            containerPayments.appendChild(studentCard);
-
-            // --- Header Card: Nome + Totale + Tasto Salda Tutto ---
+            // div = head + lista lezioni
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('slot');
+            containerPayments.appendChild(wrapper);
+            
+            // head =  div sx + bottone pagamento totale
             const head = document.createElement('div');
             head.classList.add('head');
-            // Nota: rimossi stili flex, border, padding
+            wrapper.appendChild(head);
 
+            // div sx = studente + totale dovuto
             const leftDiv = document.createElement('span');
-            leftDiv.innerHTML = `<strong>${studentName}</strong> <span class="badge warn">Totale: €${sData.total.toFixed(2)}</span>`;
             head.appendChild(leftDiv);
+            
+            const strong = document.createElement('strong');
+            strong.textContent = studentName;
+            leftDiv.appendChild(strong);
+            
+            const span = document.createElement('span');
+            span.classList.add('badge', 'warn');
+            span.textContent = 'Totale: €' + sData.total.toFixed(2);
+            leftDiv.appendChild(span);
 
+            // bottone pagamento totale
             const payAllBtn = document.createElement('button');
             payAllBtn.textContent = 'Salda tutto';
-            payAllBtn.classList.add('btn'); // Delega stile al CSS
-
-            payAllBtn.onclick = async () => {
-                if (!confirm(`Confermi di voler segnare come pagate TUTTE le lezioni di ${studentName}?`)) return;
+            payAllBtn.classList.add('btn');
+            head.appendChild(payAllBtn);
+            payAllBtn.addEventListener('click', async () => {
+                if (!confirm('Confermi di voler segnare come pagate TUTTE le lezioni di ' + studentName + '?'))
+                    return;
 
                 payAllBtn.disabled = true;
                 payAllBtn.textContent = '...';
 
-                try {
-                    const res = await fetch('../api/pay_all.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ student_id: sData.student_id })
-                    });
-                    const apiData = await res.json();
+                const res = await fetch('../api/pay_all.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: sData.student_id })
+                });
+                if (!res.ok)
+                    throw new Error('HTTP error! status: ' + res.status);
 
-                    if (apiData.success) {
-                        alert(apiData.message);
-                        await loadStats(); // Ricarica
-                    } else {
-                        alert('Errore: ' + apiData.message);
-                        payAllBtn.disabled = false;
-                        payAllBtn.textContent = 'Salda tutto';
-                    }
-                } catch (e) {
-                    alert('Errore di connessione');
-                    payAllBtn.disabled = false;
+                const data = await res.json();
+                if (data.success) { // in caso di successo ricarica le stats
+                    alert(data.message);
+                    await loadStats();
                 }
-            };
-            head.appendChild(payAllBtn);
-            studentCard.appendChild(head);
+                else {
+                    alert('Errore: ' + data.message);
+                    payAllBtn.disabled = false;
+                    payAllBtn.textContent = 'Salda tutto';
+                }
+            });
 
-            // --- Lista Lezioni Singole ---
+            // lista lezioni
             const ul = document.createElement('ul');
-            // Nota: rimossi stili list-style, padding
-
+            wrapper.appendChild(ul);
             sData.lessons.forEach(lesson => {
                 const li = document.createElement('li');
-                // Nota: rimossi stili flex, border, padding
+                ul.appendChild(li);
 
                 const infoSpan = document.createElement('span');
-                infoSpan.innerHTML = `${displayDate(lesson.date)} ${formatTime(lesson.time)} (${lesson.mode}) - <b>€${lesson.price}</b> `;
+                infoSpan.textContent = displayDate(lesson.date) + ' ' + formatTime(lesson.time) + ' ' + lesson.mode;
                 li.appendChild(infoSpan);
 
-                // Bottone Singolo "Salda"
+                // bottone pagamento singolo
                 const singleBtn = document.createElement('button');
-                singleBtn.classList.add('btn-small'); // Delega stile al CSS
+                singleBtn.classList.add('btn-small');
                 singleBtn.textContent = 'Salda';
-
-                singleBtn.onclick = async () => {
-                    if (!confirm(`Confermi il pagamento di €${lesson.price} per questa singola lezione?`)) return;
+                li.appendChild(singleBtn);
+                singleBtn.addEventListener('click', async () => {
+                    if (!confirm('Confermi il pagamento di ' + lesson.price + ' per questa singola lezione?'))
+                        return;
 
                     singleBtn.disabled = true;
                     singleBtn.textContent = '...';
 
-                    try {
-                        const res = await fetch('../api/pay_single.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ booking_id: lesson.booking_id })
-                        });
-                        const respData = await res.json();
-                        if (respData.success) {
-                            await loadStats(); // Ricarica
-                        } else {
-                            alert('Errore: ' + respData.message);
-                            singleBtn.disabled = false;
-                            singleBtn.textContent = 'Salda';
-                        }
-                    } catch (e) {
-                        alert('Errore di rete');
+                    const res = await fetch('../api/pay_single.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ booking_id: lesson.booking_id })
+                    });
+                    if (!res.ok)
+                        throw new Error('HTTP error! status: ' + res.status);
+
+                    const data = await res.json();
+                    if (data.success)
+                        await loadStats(); // ricarica le stats in caso di successo
+                    else {
+                        alert('Errore: ' + data.message);
                         singleBtn.disabled = false;
                         singleBtn.textContent = 'Salda';
                     }
-                };
-
-                li.appendChild(singleBtn);
-                ul.appendChild(li);
+                });
             });
-            studentCard.appendChild(ul);
         }
     }
 
-    // Sidebar stats
+    // sidebar stats
     $('#statUpcoming').textContent = next;
     $('#statHours').textContent = past;
     $('#statDue').textContent = '€' + toHave.toFixed(2);
 
     if (next === 0) containerUpcoming.innerHTML = '<div class="empty">Nessuna lezione futura.</div>';
     if (past === 0) containerHistory.innerHTML = '<div class="empty">Nessuna lezione passata.</div>';
-    if (toHave === 0) containerPayments.innerHTML = '<div class="empty">Nessun pagamento in sospeso!</div>';
+    if (toHave === 0) containerPayments.innerHTML = '<div class="empty">Nessun pagamento in sospeso.</div>';
 }
 
 /* ----- tab configurazione ----- */
 async function loadConfig() {
     console.log('loadConfig called');
+    // recupero container
     const container = $('#configList');
     container.innerHTML = 'Caricamento configurazione...';
     container.className = '';
 
-    // --- FIX SCROLLING PAGINA GENERALE ---
-    // Il css attuale di .main non ha overflow, glielo forziamo qui via JS
-    const mainElement = document.querySelector('main');
-    if (mainElement) {
-        mainElement.style.overflowY = 'auto';
-        mainElement.style.height = '100%'; // Assicura che occupi lo spazio
-    }
-    // -------------------------------------
-
+    //recupero dati
     const res = await fetch('../api/config_get.php');
     const data = await res.json();
 
@@ -424,169 +425,160 @@ async function loadConfig() {
         return;
     }
 
+    // inizializzazione container e variabili
+    container.innerHTML = '';
     const profile = data.profile;
     const allSubs = data.all_subjects;
     const mySubs = data.my_subjects;
 
-    container.innerHTML = '';
-
+    // form = descrizione + tariffe + materie
     const formWrapper = document.createElement('div');
     formWrapper.classList.add('config-form');
-    // Aggiungiamo margine in fondo per essere sicuri che il bottone non sia attaccato al bordo
-    formWrapper.style.paddingBottom = '50px';
     container.appendChild(formWrapper);
 
-    // --- A. Descrizione ---
+    // descrizione
     const groupDesc = document.createElement('div');
     groupDesc.classList.add('form-group');
+    formWrapper.appendChild(groupDesc);
+    
     const lblDesc = document.createElement('label');
     lblDesc.textContent = 'Descrizione (max 500 car.):';
+    groupDesc.appendChild(lblDesc);
+    
     const txtDesc = document.createElement('textarea');
     txtDesc.value = profile.description || '';
     txtDesc.rows = 5;
-    groupDesc.appendChild(lblDesc);
     groupDesc.appendChild(txtDesc);
-    formWrapper.appendChild(groupDesc);
 
-    // --- B. Tariffe ---
+    // tariffe = online + presenza
     const groupCost = document.createElement('div');
     groupCost.classList.add('form-row');
+    formWrapper.appendChild(groupCost);
 
-    // Online
+    // online
     const divOnline = document.createElement('div');
     divOnline.classList.add('form-group');
+    groupCost.appendChild(divOnline);
+    
     const lblOnline = document.createElement('label');
     lblOnline.textContent = 'Tariffa Online (€):';
+    divOnline.appendChild(lblOnline);
+    
     const inpOnline = document.createElement('input');
     inpOnline.type = 'number';
     inpOnline.step = '0.5';
     inpOnline.min = '0';
     inpOnline.value = profile.cost_online;
-    divOnline.appendChild(lblOnline);
     divOnline.appendChild(inpOnline);
-    groupCost.appendChild(divOnline);
 
-    // Presenza
+    // presenza
     const divPres = document.createElement('div');
     divPres.classList.add('form-group');
+    
     const lblPres = document.createElement('label');
+    groupCost.appendChild(divPres);
     lblPres.textContent = 'Tariffa Presenza (€):';
+    divPres.appendChild(lblPres);
+    
     const inpPres = document.createElement('input');
     inpPres.type = 'number';
     inpPres.step = '0.5';
     inpPres.min = '0';
     inpPres.value = profile.cost_presenza;
-    divPres.appendChild(lblPres);
     divPres.appendChild(inpPres);
-    groupCost.appendChild(divPres);
 
-    formWrapper.appendChild(groupCost);
-
-    // --- C. Materie ---
+    // materie
     const groupSub = document.createElement('div');
     groupSub.classList.add('form-group');
+    formWrapper.appendChild(groupSub);
+    
     const lblSub = document.createElement('label');
     lblSub.textContent = 'Seleziona le materie che insegni:';
     groupSub.appendChild(lblSub);
-
+    
     const subContainer = document.createElement('div');
     subContainer.classList.add('checkbox-grid');
-
-    // --- FIX SCROLLING LISTA MATERIE ---
-    subContainer.style.maxHeight = '300px';
-    subContainer.style.overflowY = 'scroll'; // 'scroll' forza la barra sempre visibile
-    subContainer.style.border = '1px solid #ccc';
-    subContainer.style.padding = '10px';
-    subContainer.style.display = 'block'; // Assicura comportamento a blocco
-    // -----------------------------------
-
+    groupSub.appendChild(subContainer);
+    
     allSubs.forEach(sub => {
-        // Creiamo un div wrapper per ogni riga per forzare l'andata a capo
+        // div wrapper per ogni riga per forzare l'andata a capo
         const row = document.createElement('div');
-        row.style.padding = '4px 0';
-
+        subContainer.appendChild(row);
+        
         const label = document.createElement('label');
         label.classList.add('checkbox-item');
-        label.style.cursor = 'pointer';
-        label.style.display = 'flex'; // Allinea checkbox e testo
-        label.style.alignItems = 'center';
-
+        row.appendChild(label);
+        
         const chk = document.createElement('input');
         chk.type = 'checkbox';
         chk.value = sub.id;
         chk.name = 'subjects';
-        chk.style.marginRight = '10px'; // Spazio visivo
-
-        if (mySubs.some(myId => myId == sub.id)) {
+        
+        if (mySubs.some(myId => myId == sub.id))
             chk.checked = true;
-        }
-
         label.appendChild(chk);
         label.appendChild(document.createTextNode(sub.name));
-
-        row.appendChild(label);
-        subContainer.appendChild(row);
     });
 
-    groupSub.appendChild(subContainer);
-    formWrapper.appendChild(groupSub);
-
-    // --- D. Bottone Salva ---
+    // bottone salvataggio
     const btnSave = document.createElement('button');
     btnSave.textContent = 'Salva Modifiche';
     btnSave.classList.add('btn');
-    btnSave.style.marginTop = '20px'; // Spazio extra sopra il bottone
-
+    btnSave.style.marginTop = '20px'; // spazio extra sopra il bottone
+    formWrapper.appendChild(btnSave);
     btnSave.addEventListener('click', async () => {
         const descVal = txtDesc.value.trim();
         const costOnVal = parseFloat(inpOnline.value);
         const costPrVal = parseFloat(inpPres.value);
 
         const selectedSubs = [];
-        formWrapper.querySelectorAll('input[name="subjects"]:checked').forEach(c => {
+        $$('input[name="subjects"]:checked').forEach(c => {
             selectedSubs.push(c.value);
         });
 
         if (descVal.length > 500) {
-            alert('Descrizione troppo lunga.'); return;
+            alert('Descrizione troppo lunga.');
+            return;
         }
+
         if (isNaN(costOnVal) || costOnVal < 0 || isNaN(costPrVal) || costPrVal < 0) {
-            alert('Tariffe non valide.'); return;
+            alert('Tariffe non valide.');
+            return;
         }
+        
         if (selectedSubs.length === 0) {
-            if (!confirm('Nessuna materia selezionata. Continuare?')) return;
+            if (!confirm('Nessuna materia selezionata. Continuare?'))
+                return;
         }
 
         btnSave.disabled = true;
         btnSave.textContent = 'Salvataggio...';
 
-        try {
-            const resUpdate = await fetch('../api/config_update.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    description: descVal,
-                    cost_online: costOnVal,
-                    cost_presenza: costPrVal,
-                    subjects: selectedSubs
-                })
-            });
-            const dataUpdate = await resUpdate.json();
+        const res = await fetch('../api/config_update.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                description: descVal,
+                cost_online: costOnVal,
+                cost_presenza: costPrVal,
+                subjects: selectedSubs
+            })
+        });
+        if (!res.ok)
+            throw new Error('HTTP error! status: ' + res.status);
 
-            if (dataUpdate.success) {
-                alert('Salvato con successo!');
-            } else {
-                alert('Errore: ' + dataUpdate.message);
-            }
-        } catch (e) {
-            alert('Errore server');
+        const data = await res.json();
+        if (data.success) {
+            alert('Salvato con successo!');
+        }
+        else {
+            alert('Errore: ' + data.message);
         }
 
         btnSave.disabled = false;
         btnSave.textContent = 'Salva Modifiche';
     });
 
-    formWrapper.appendChild(btnSave);
 }
 
 /* ----- logout ----- */

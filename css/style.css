@@ -1,8 +1,4 @@
-/* =========================================
-   style.css - Versione Aggiornata (Fix Layout)
-   ========================================= */
-
-/* --- RESET E BASE --- */
+/* --- RESET E STILE GENERALE --- */
 * {
     box-sizing: border-box;
 }
@@ -183,8 +179,7 @@ form {
     gap: 15px;
 }
 
-#loginForm,
-#regForm {
+#loginForm, #regForm {
     max-width: 100%;
 }
 
@@ -196,9 +191,8 @@ label {
     display: block;
 }
 
-input:not([type="checkbox"]):not([type="radio"]),
-select,
-textarea {
+/* Stile per tutti gli input tranne checkbox e radio */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea { 
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -207,15 +201,13 @@ textarea {
     background-color: #fff;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: #004080;
     box-shadow: 0 0 0 3px rgba(0, 64, 128, 0.1);
 }
 
-/* --- CONFIG TUTOR --- */
+/* --- TAB CONFIG TUTOR --- */
 .checkbox-grid {
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -252,8 +244,7 @@ textarea:focus {
 }
 
 /* --- BUTTONS --- */
-button,
-.btn {
+button, .btn {
     padding: 10px 20px;
     border: none;
     border-radius: 6px;
@@ -264,20 +255,16 @@ button,
     display: inline-block;
 }
 
-button:active,
-.btn:active {
+button:active, .btn:active {
     transform: scale(0.98);
 }
 
-.btn.primary,
-button[type="submit"],
-#applyFilters {
+.btn.primary, button[type="submit"], #applyFilters {
     background-color: #0056b3;
     color: white;
 }
 
-.btn.primary:hover,
-button[type="submit"]:hover {
+.btn.primary:hover, button[type="submit"]:hover {
     background-color: #004494;
 }
 
@@ -314,7 +301,13 @@ button[type="submit"]:hover {
     color: white;
 }
 
-/* --- SLOTS GRID & CARDS --- */
+#logoutBtn {
+    background-color: #c82333;
+    border: none;
+    color: white;
+}
+
+/* --- SLOTS GRID E CARDS --- */
 .slots-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -352,7 +345,7 @@ button[type="submit"]:hover {
     gap: 5px;
 }
 
-/* Liste Pagamenti Studente (Griglia) */
+/* liste pagamenti studente */
 .slot .meta ul {
     display: flex;
     flex-wrap: wrap;
@@ -369,7 +362,7 @@ button[type="submit"]:hover {
     font-size: 0.85rem;
 }
 
-/* [FIX] Liste Pagamenti Tutor (Riga Singola Orizzontale) */
+/* liste pagamenti tutor */
 .slot ul {
     display: flex;
     flex-direction: column;
@@ -380,12 +373,9 @@ button[type="submit"]:hover {
 .slot ul li {
     display: flex;
     flex-direction: row;
-    /* Forza riga */
     justify-content: space-between;
-    /* Spazio tra testo e bottone */
     align-items: center;
     flex-wrap: nowrap;
-    /* Impedisce a capo */
     background: #fbfbfb;
     border: 1px solid #f0f0f0;
     padding: 10px 12px;
@@ -396,7 +386,6 @@ button[type="submit"]:hover {
 .slot ul li span {
     font-size: 0.95rem;
     white-space: nowrap;
-    /* Testo su una riga */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -471,7 +460,7 @@ button[type="submit"]:hover {
     display: none;
 }
 
-/* [FIX] STILE INFO TUTOR NEL MODAL */
+/* STILE INFO TUTOR NEL MODAL */
 .tutor-detail-section {
     margin-bottom: 25px;
     padding-bottom: 15px;
@@ -501,7 +490,6 @@ button[type="submit"]:hover {
 
 .tutor-rates {
     list-style: none;
-    /* Via i pallini default */
     padding: 0;
     margin: 0;
     display: flex;
@@ -524,7 +512,7 @@ button[type="submit"]:hover {
     gap: 8px;
 }
 
-/* Radio buttons */
+/* radio buttons */
 .mode-chooser {
     display: flex;
     gap: 15px;

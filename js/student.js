@@ -204,13 +204,28 @@ async function loadStats() {
             btn.textContent = 'Cancella';
             btn.addEventListener('click', async () => {
                 btn.disabled = true;
+
+                if (!confirm('Sei sicuro di voler cancellare questa prenotazione?'))
+                    return btn.disabled = false;
+
+                // controllo data limite cancellazione (24h prima)
+                const now = new Date();
+                const bookingDate = new Date(s.date + 'T' + s.time);
+                const diffMs = bookingDate - now;
+                const diffHrs = diffMs / (1000 * 60 * 60);
+                if (diffHrs < 24) {
+                    alert('Impossibile cancellare: la prenotazione è entro le 24 ore.');
+                    btn.disabled = false;
+                    return;
+                }
+
                 const res = await fetch('../api/bookings_cancel.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ booking_id: s.booking_id })
                 });
+                
                 const data = await res.json();
-
                 if (!data.success) {
                     alert('Errore cancellazione: ' + data.message);
                     btn.disabled = false;
@@ -392,21 +407,20 @@ function openConfirm(tutor, date, time, mode) {
 
 /* ----- Funzione per mostrare dettagli tutor ----- */
 async function showTutorInfo(tutorId, tutorName) {
+    console.log('showTutorInfo called', { tutorId, tutorName });
 
-    // Setup iniziale del Modale
+    // inizializzazione modal
     modalTitle.textContent = 'Profilo Tutor: ' + tutorName;
     modalBody.innerHTML = 'Caricamento profilo...';
 
-    // Nascondi il bottone di conferma prenotazione
+    // nascondo bottone di conferma prenotazione
     confirmBtn.classList.add('hidden-force');
     cancelBtn.textContent = 'Chiudi';
     modal.classList.remove('hidden');
 
-    // Chiamata API diretta senza blocco try-catch
+    // recupero dati
     const res = await fetch('../api/tutor_details.php?id=' + tutorId);
     const data = await res.json();
-
-    // Gestione errore API (es. tutor non trovato)
     if (!data.success) {
         modalBody.innerHTML = '<p class="error">' + data.message + '</p>';
         return;
@@ -414,26 +428,71 @@ async function showTutorInfo(tutorId, tutorName) {
 
     const t = data.tutor;
     const subs = data.subjects;
-
-    // Pulisce il messaggio di caricamento
+    
+    // modalBody = descrizione + materie + tariffe
     modalBody.innerHTML = '';
 
-    // Costruzione contenuto
-    const descSection = document.createElement('div');
-    descSection.className = 'tutor-detail-section';
-    descSection.innerHTML = `<strong>Chi sono:</strong><p class="tutor-desc">${t.description || 'Nessuna descrizione.'}</p>`;
-    modalBody.appendChild(descSection);
+    // descrizione
+    const descDiv = document.createElement('div');
+    descDiv.className = 'tutor-detail-section';
+    modalBody.appendChild(descDiv);
+    
+    const strong = document.createElement('strong');
+    strong.textContent = 'Chi sono:';
+    descDiv.appendChild(strong);
+    
+    const p = document.createElement('p');
+    p.className = 'tutor-desc';
+    p.textContent = t.description || 'Nessuna descrizione.';
+    descDiv.appendChild(p);
 
-    const subSection = document.createElement('div');
-    subSection.className = 'tutor-detail-section';
-    let tagsHtml = subs.length > 0 ? subs.map(s => `<span class="badge info">${s}</span>`).join(' ') : '<span>Nessuna materia.</span>';
-    subSection.innerHTML = `<strong>Materie insegnate:</strong><div class="tutor-tags">${tagsHtml}</div>`;
-    modalBody.appendChild(subSection);
+    // materie
+    const subDiv = document.createElement('div');
+    subDiv.className = 'tutor-detail-section';
+    modalBody.appendChild(subDiv);
+    
+    const subStrong = document.createElement('strong');
+    subStrong.textContent = 'Materie insegnate:';
+    subDiv.appendChild(subStrong);
 
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'tutor-tags';
+    subDiv.appendChild(tagsContainer);
+
+    if (subs.length > 0) { // popolazione materie insegnate
+        subs.forEach(function (materia) {
+            const span = document.createElement('span');
+            span.className = 'badge info';
+            span.textContent = materia;
+            tagsContainer.appendChild(span);
+        });
+    }
+    else {
+        const span = document.createElement('span');
+        span.textContent = 'Nessuna materia.';
+        tagsContainer.appendChild(span);
+    }
+
+    // tariffe
     const ratesSection = document.createElement('div');
     ratesSection.className = 'tutor-detail-section';
-    ratesSection.innerHTML = `<strong>Tariffe:</strong><ul class="tutor-rates"><li>Online: €${t.cost_online}</li><li>In presenza: €${t.cost_presenza}</li></ul>`;
     modalBody.appendChild(ratesSection);
+    
+    const strongRates = document.createElement('strong');
+    strongRates.textContent = 'Tariffe:';
+    ratesSection.appendChild(strongRates);
+    
+    const ul = document.createElement('ul');
+    ul.className = 'tutor-rates';
+    ratesSection.appendChild(ul);
+    
+    const liOnline = document.createElement('li');
+    liOnline.textContent = 'Online: €' + t.cost_online;
+    ul.appendChild(liOnline);
+    
+    const liPresenza = document.createElement('li');
+    liPresenza.textContent = 'In presenza: €' + t.cost_presenza;
+    ul.appendChild(liPresenza);
 }
 
 // handler bottoni

@@ -10,18 +10,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'tutor') {
     exit;
 }
 
+// recupero e controllo input
 $input = json_decode(file_get_contents('php://input'), true);
 $student_id = (int)$input['student_id'];
-
 if (!$student_id) {
     echo json_encode(['success' => false, 'message' => '[pay_all.php] ID studente mancante']);
     exit;
 }
 
 try {
+    // transazione per segnare le lezioni come pagate
     $pdo->beginTransaction();
 
-    // UPDATE con JOIN per assicurarsi che il tutor stia pagando solo le lezioni dei SUOI slot
+    // update con join per assicurarsi che il tutor stia pagando solo le lezioni dei suoi slot
     // e solo quelle non ancora pagate (paid = 0)
     $sql = '
         UPDATE bookings b
@@ -34,7 +35,6 @@ try {
 
     $statement = $pdo->prepare($sql);
     $statement->execute([$student_id, $_SESSION['user_id']]);
-
     $count = $statement->rowCount();
     $pdo->commit();
 
@@ -44,6 +44,6 @@ try {
         'count' => $count
     ]);
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    $pdo->rollBack();
     echo json_encode(['success' => false, 'message' => '[pay_all.php] Errore server: ' . $e->getMessage()]);
 }
